@@ -1,0 +1,8 @@
+[package]
+name = "boxsqld"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+storage = {path = "../storage"}
+anyhow = {version = "1.0.99"}
