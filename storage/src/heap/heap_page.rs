@@ -124,16 +124,30 @@ impl HeapPage {
 	/// # Arguments
 	/// * `slot_no` - The slot number to read from
 	/// 
-	/// # Returns
-	/// Some(tuple_data) if the tuple exists, None if deleted or slot doesn't exist
-	pub fn read_tuple(&self, slot_no: usize) -> Option<&[u8]> {
-		if slot_no >= self.slot_count() { return None; }
-		let slot = self.read_slot(slot_no);
-		if slot.len == 0 { return None; } // tombstone
-		let off = slot.off as usize;
-		let len = slot.len as usize;
-		Some(&self.page.buf[off..off + len])
-	}
+        /// # Returns
+        /// Some(tuple_data) if the tuple exists, None if deleted or slot doesn't exist
+        pub fn read_tuple(&self, slot_no: usize) -> Option<&[u8]> {
+                if slot_no >= self.slot_count() {
+                        return None;
+                }
+                let slot = self.read_slot(slot_no);
+                if slot.len == 0 {
+                        return None; // tombstone
+                }
+
+                let off = slot.off as usize;
+                let len = slot.len as usize;
+                let end = off + len;
+                let hdr = self.page.header();
+
+                // Validate that the tuple lies within the actual data region
+                // to avoid out-of-bounds panics on corrupted pages.
+                if off < PageHeader::LEN || end > hdr.lower as usize || end > PAGE_SIZE {
+                        return None;
+                }
+
+                Some(&self.page.buf[off..end])
+        }
 
 	/// Deletes a tuple by marking it as a tombstone.
 	/// 
@@ -458,10 +472,10 @@ mod tests {
 	/// - Slot directory grows downward from page end
 	/// - Slots are correctly indexed and accessible
 	/// - Slot directory and data area don't overlap
-	#[test]
-	fn heap_page_slot_directory() {
-		let pid = PageId::new(1, 6);
-		let mut hp = HeapPage::new_empty(pid);
+        #[test]
+        fn heap_page_slot_directory() {
+                let pid = PageId::new(1, 6);
+                let mut hp = HeapPage::new_empty(pid);
 		
 		// Insert tuples and track slot assignments
 		let mut slots = Vec::new();
@@ -476,9 +490,30 @@ mod tests {
 		}
 		
 		// Verify each slot contains the correct data
-		for (i, &slot_no) in slots.iter().enumerate() {
-			let expected = vec![i as u8; 10];
-			assert_eq!(hp.read_tuple(slot_no).unwrap(), &expected);
-		}
-	}
+                for (i, &slot_no) in slots.iter().enumerate() {
+                        let expected = vec![i as u8; 10];
+                        assert_eq!(hp.read_tuple(slot_no).unwrap(), &expected);
+                }
+        }
+
+        /// Ensures corrupted slot entries do not cause panics and return None instead.
+        ///
+        /// This test verifies:
+        /// - read_tuple() gracefully handles slots pointing outside the data region
+        /// - No panic occurs when slot offset/length are out of bounds
+        /// - Function returns None for corrupted slot metadata
+        #[test]
+        fn heap_page_read_tuple_out_of_bounds() {
+                let pid = PageId::new(1, 7);
+                let mut hp = HeapPage::new_empty(pid);
+
+                let slot = hp.insert_tuple(b"data").unwrap();
+
+                // Corrupt the slot to point beyond the end of the page
+                let base = PAGE_SIZE - ((slot + 1) * Slot::SIZE);
+                hp.page.write_u16(base, (PAGE_SIZE + 10) as u16);
+
+                // Should not panic and must return None for out-of-bounds slot
+                assert!(hp.read_tuple(slot).is_none());
+        }
 }
