@@ -166,5 +166,7 @@ mod tests {
 		
 		assert_eq!(original_hdr.page_id, copied_hdr.page_id);
 		assert_eq!(original_hdr.page_flags, copied_hdr.page_flags);
+		assert_eq!(original_hdr.lower, copied_hdr.lower);
+		assert_eq!(original_hdr.upper, copied_hdr.upper);
 	}
 }

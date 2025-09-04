@@ -205,7 +205,7 @@ mod tests {
 	/// - Multiple pages in the same file are handled correctly
 	/// - Page headers and data are correctly serialized/deserialized
 	#[test]
-	fn page_write_read_roundtrip() -> anyhow::Result<()> {
+	fn page_write_read_round_trip() -> anyhow::Result<()> {
 		let temp_directory = TempDir::new()?;
 		let mut dm = FsDiskManager::new(temp_directory.path())?;
 		

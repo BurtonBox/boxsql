@@ -55,7 +55,7 @@ cargo build --release
 cargo test
 
 # Run the database daemon
-cargo run -p boxsqld
+cargo run --release -p boxsqld 
 ```
 
 ## 🚦 Quick Start
