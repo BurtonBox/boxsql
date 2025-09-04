@@ -3,11 +3,11 @@
 //! This module implements the physical execution of query plans using
 //! iterators over the storage engine primitives.
 
-use crate::query::planner::PhysicalPlan;
-use crate::query::types::{Row, Schema, Value};
 use crate::disk::disk_manager::DiskManager;
 use crate::heap::heap_page::HeapPage;
 use crate::query::ast::Expression;
+use crate::query::planner::PhysicalPlan;
+use crate::query::types::{Row, Schema, Value};
 
 /// Query execution result.
 pub struct QueryResult {
@@ -47,7 +47,8 @@ impl QueryExecutor {
             }
             PhysicalPlan::Projection { exprs, input } => {
                 let input_result = self.execute(*input, disk_manager)?;
-                let (rows, schema) = self.execute_projection(&exprs, input_result.rows, &input_result.schema)?;
+                let (rows, schema) =
+                    self.execute_projection(&exprs, input_result.rows, &input_result.schema)?;
                 Ok(QueryResult { rows, schema })
             }
             PhysicalPlan::Limit { limit, input } => {
@@ -76,11 +77,11 @@ impl QueryExecutor {
 
         loop {
             let pid = PageId::new(file_id, page_no);
-            
+
             match disk_manager.read_page(pid) {
                 Ok(page) => {
                     let heap_page = HeapPage { page };
-                    
+
                     // Scan all slots in this page
                     for slot_no in 0..heap_page.slot_count() {
                         if let Some(tuple_data) = heap_page.read_tuple(slot_no) {
@@ -88,7 +89,7 @@ impl QueryExecutor {
                             rows.push(row);
                         }
                     }
-                    
+
                     page_no += 1;
                 }
                 Err(_) => {
@@ -107,13 +108,13 @@ impl QueryExecutor {
         input_rows: Vec<Row>,
     ) -> anyhow::Result<Vec<Row>> {
         let mut result_rows = Vec::new();
-        
+
         for row in input_rows {
             if self.evaluate_predicate(predicate, &row)? {
                 result_rows.push(row);
             }
         }
-        
+
         Ok(result_rows)
     }
 
@@ -125,18 +126,18 @@ impl QueryExecutor {
         _input_schema: &Schema,
     ) -> anyhow::Result<(Vec<Row>, Schema)> {
         let mut result_rows = Vec::new();
-        
+
         for input_row in input_rows {
             let mut output_row = Vec::new();
-            
+
             for expr in exprs {
                 let value = self.evaluate_expression(expr, &input_row)?;
                 output_row.push(value);
             }
-            
+
             result_rows.push(output_row);
         }
-        
+
         // TODO: Create proper output schema based on expressions
         // For now, create a simple schema
         use crate::query::types::{Column, DataType};
@@ -151,7 +152,7 @@ impl QueryExecutor {
                 })
                 .collect(),
         );
-        
+
         Ok((result_rows, schema))
     }
 
@@ -164,7 +165,7 @@ impl QueryExecutor {
     fn deserialize_row(&self, data: &[u8], schema: &Schema) -> anyhow::Result<Row> {
         let mut row = Vec::new();
         let mut offset = 0;
-        
+
         for column in &schema.columns {
             let value = match &column.data_type {
                 crate::query::types::DataType::Integer => {
@@ -183,7 +184,7 @@ impl QueryExecutor {
                     let len_bytes = &data[offset..offset + 4];
                     let len = u32::from_le_bytes(len_bytes.try_into()?) as usize;
                     offset += 4;
-                    
+
                     if offset + len > data.len() {
                         anyhow::bail!("Not enough data for varchar content");
                     }
@@ -203,19 +204,17 @@ impl QueryExecutor {
             };
             row.push(value);
         }
-        
+
         Ok(row)
     }
 
     /// Evaluates a predicate expression against a row.
     fn evaluate_predicate(&self, expr: &Expression, _row: &Row) -> anyhow::Result<bool> {
         match expr {
-            Expression::Literal { value } => {
-                match value {
-                    Value::Boolean(b) => Ok(*b),
-                    _ => anyhow::bail!("Non-boolean literal in predicate"),
-                }
-            }
+            Expression::Literal { value } => match value {
+                Value::Boolean(b) => Ok(*b),
+                _ => anyhow::bail!("Non-boolean literal in predicate"),
+            },
             Expression::Column { .. } => {
                 // TODO: Implement column value lookup
                 anyhow::bail!("Column references in predicates not yet implemented")
@@ -253,8 +252,8 @@ impl Default for QueryExecutor {
 mod tests {
     use super::*;
     use crate::disk::file_system::FsDiskManager;
-    use crate::query::types::{Column, DataType, Schema};
     use crate::query::planner::PhysicalPlan;
+    use crate::query::types::{Column, DataType, Schema};
     use tempfile::TempDir;
 
     #[test]
@@ -267,23 +266,21 @@ mod tests {
     fn test_seq_scan_plan() {
         let temp_dir = TempDir::new().unwrap();
         let mut dm = FsDiskManager::new(temp_dir.path().to_str().unwrap()).unwrap();
-        
-        let schema = Schema::new(vec![
-            Column {
-                name: "id".to_string(),
-                data_type: DataType::Integer,
-                nullable: false,
-            },
-        ]);
-        
+
+        let schema = Schema::new(vec![Column {
+            name: "id".to_string(),
+            data_type: DataType::Integer,
+            nullable: false,
+        }]);
+
         let plan = PhysicalPlan::SeqScan {
             table_name: "test".to_string(),
             schema: schema.clone(),
         };
-        
+
         let executor = QueryExecutor::new();
         let result = executor.execute(plan, &mut dm);
-        
+
         // Should succeed even with no data
         assert!(result.is_ok());
         let query_result = result.unwrap();

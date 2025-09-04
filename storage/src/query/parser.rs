@@ -4,24 +4,21 @@
 //! It supports basic SELECT statements with FROM, WHERE, and LIMIT clauses.
 
 use nom::{
+    IResult,
     branch::alt,
     bytes::complete::{tag, tag_no_case, take_while1},
     character::complete::{char, digit1, multispace0, multispace1},
     combinator::{map, opt, recognize},
     multi::separated_list1,
     sequence::{delimited, preceded, terminated, tuple},
-    IResult,
 };
 
-use crate::query::ast::{
-    BinaryOperator, Expression, SelectItem, SelectStatement, Statement,
-};
+use crate::query::ast::{BinaryOperator, Expression, SelectItem, SelectStatement, Statement};
 use crate::query::types::Value;
 
 /// Parses a complete SQL statement.
 pub fn parse_sql(input: &str) -> anyhow::Result<Statement> {
-    let (_remaining, stmt) = statement(input)
-        .map_err(|e| anyhow::anyhow!("Parse error: {}", e))?;
+    let (_remaining, stmt) = statement(input).map_err(|e| anyhow::anyhow!("Parse error: {}", e))?;
     Ok(stmt)
 }
 
@@ -53,17 +50,17 @@ fn select_statement(input: &str) -> IResult<&str, Statement> {
 
 /// Parses the SELECT list (columns or expressions).
 fn select_list(input: &str) -> IResult<&str, Vec<SelectItem>> {
-    separated_list1(
-        delimited(multispace0, char(','), multispace0),
-        select_item,
-    )(input)
+    separated_list1(delimited(multispace0, char(','), multispace0), select_item)(input)
 }
 
 /// Parses a single SELECT item.
 fn select_item(input: &str) -> IResult<&str, SelectItem> {
     alt((
         map(char('*'), |_| SelectItem::Wildcard),
-        map(expression, |expr| SelectItem::Expression { expr, alias: None }),
+        map(expression, |expr| SelectItem::Expression {
+            expr,
+            alias: None,
+        }),
     ))(input)
 }
 
@@ -108,13 +105,13 @@ fn or_expression(input: &str) -> IResult<&str, Expression> {
 
     Ok((
         input,
-        rights.into_iter().fold(left, |acc, (_, right)| {
-            Expression::BinaryOp {
+        rights
+            .into_iter()
+            .fold(left, |acc, (_, right)| Expression::BinaryOp {
                 left: Box::new(acc),
                 op: BinaryOperator::Or,
                 right: Box::new(right),
-            }
-        }),
+            }),
     ))
 }
 
@@ -128,13 +125,13 @@ fn and_expression(input: &str) -> IResult<&str, Expression> {
 
     Ok((
         input,
-        rights.into_iter().fold(left, |acc, (_, right)| {
-            Expression::BinaryOp {
+        rights
+            .into_iter()
+            .fold(left, |acc, (_, right)| Expression::BinaryOp {
                 left: Box::new(acc),
                 op: BinaryOperator::And,
                 right: Box::new(right),
-            }
-        }),
+            }),
     ))
 }
 
@@ -186,13 +183,13 @@ fn additive_expression(input: &str) -> IResult<&str, Expression> {
 
     Ok((
         input,
-        rights.into_iter().fold(left, |acc, (op, right)| {
-            Expression::BinaryOp {
+        rights
+            .into_iter()
+            .fold(left, |acc, (op, right)| Expression::BinaryOp {
                 left: Box::new(acc),
                 op,
                 right: Box::new(right),
-            }
-        }),
+            }),
     ))
 }
 
@@ -212,13 +209,13 @@ fn multiplicative_expression(input: &str) -> IResult<&str, Expression> {
 
     Ok((
         input,
-        rights.into_iter().fold(left, |acc, (op, right)| {
-            Expression::BinaryOp {
+        rights
+            .into_iter()
+            .fold(left, |acc, (op, right)| Expression::BinaryOp {
                 left: Box::new(acc),
                 op,
                 right: Box::new(right),
-            }
-        }),
+            }),
     ))
 }
 
@@ -303,13 +300,13 @@ fn identifier(input: &str) -> IResult<&str, String> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::query::ast::{SelectItem};
+    use crate::query::ast::SelectItem;
 
     #[test]
     fn test_select_star() {
         let sql = "SELECT * FROM users";
         let stmt = parse_sql(sql).unwrap();
-        
+
         let Statement::Select(select) = stmt;
         assert_eq!(select.select_list, vec![SelectItem::Wildcard]);
         assert_eq!(select.from, Some("users".to_string()));
@@ -321,7 +318,7 @@ mod tests {
     fn test_select_columns() {
         let sql = "SELECT id, name FROM users";
         let stmt = parse_sql(sql).unwrap();
-        
+
         let Statement::Select(select) = stmt;
         assert_eq!(select.select_list.len(), 2);
         assert_eq!(select.from, Some("users".to_string()));
@@ -331,7 +328,7 @@ mod tests {
     fn test_select_with_where() {
         let sql = "SELECT * FROM users WHERE id = 42";
         let stmt = parse_sql(sql).unwrap();
-        
+
         let Statement::Select(select) = stmt;
         assert!(select.where_clause.is_some());
     }
@@ -340,7 +337,7 @@ mod tests {
     fn test_select_with_limit() {
         let sql = "SELECT * FROM users LIMIT 10";
         let stmt = parse_sql(sql).unwrap();
-        
+
         let Statement::Select(select) = stmt;
         assert_eq!(select.limit, Some(10));
     }
@@ -349,7 +346,7 @@ mod tests {
     fn test_expression_parsing() {
         let sql = "SELECT 42 + 3 * 5";
         let stmt = parse_sql(sql).unwrap();
-        
+
         let Statement::Select(select) = stmt;
         assert_eq!(select.select_list.len(), 1);
         assert!(select.from.is_none());
@@ -359,7 +356,7 @@ mod tests {
     fn test_string_literal() {
         let sql = "SELECT 'hello world'";
         let stmt = parse_sql(sql).unwrap();
-        
+
         let Statement::Select(select) = stmt;
         if let SelectItem::Expression { expr, .. } = &select.select_list[0] {
             if let Expression::Literal { value } = expr {
@@ -376,7 +373,7 @@ mod tests {
     fn test_boolean_literals() {
         let sql = "SELECT true, false";
         let stmt = parse_sql(sql).unwrap();
-        
+
         let Statement::Select(select) = stmt;
         assert_eq!(select.select_list.len(), 2);
     }

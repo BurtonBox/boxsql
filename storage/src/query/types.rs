@@ -3,8 +3,8 @@
 //! This module defines the type system used throughout the query processor,
 //! including SQL data types, values, and schema definitions.
 
-use std::fmt;
 use serde::{Deserialize, Serialize};
+use std::fmt;
 
 /// SQL data types supported by the database.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]

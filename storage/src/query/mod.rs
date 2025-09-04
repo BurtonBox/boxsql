@@ -1,5 +1,5 @@
 //! Query processing module for SQL parsing, planning, and execution.
-//! 
+//!
 //! This module provides the complete query processing pipeline:
 //! - SQL parsing to abstract syntax trees
 //! - Query planning and optimization  
@@ -18,9 +18,9 @@
 //! - Simple join algorithms
 
 pub mod ast;
+pub mod executor;
 pub mod parser;
 pub mod planner;
-pub mod executor;
 pub mod types;
 
 #[cfg(test)]

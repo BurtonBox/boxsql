@@ -10,10 +10,7 @@ use crate::query::types::Schema;
 #[derive(Debug, Clone, PartialEq)]
 pub enum LogicalPlan {
     /// Table scan operation
-    TableScan {
-        table_name: String,
-        schema: Schema,
-    },
+    TableScan { table_name: String, schema: Schema },
     /// Projection (SELECT list) operation  
     Projection {
         exprs: Vec<Expression>,
@@ -25,20 +22,14 @@ pub enum LogicalPlan {
         input: Box<LogicalPlan>,
     },
     /// Limit operation
-    Limit {
-        limit: u32,
-        input: Box<LogicalPlan>,
-    },
+    Limit { limit: u32, input: Box<LogicalPlan> },
 }
 
 /// Physical execution plan node.
 #[derive(Debug, Clone)]
 pub enum PhysicalPlan {
     /// Sequential scan of table pages
-    SeqScan {
-        table_name: String,
-        schema: Schema,
-    },
+    SeqScan { table_name: String, schema: Schema },
     /// Projection operation
     Projection {
         exprs: Vec<Expression>,
@@ -98,7 +89,11 @@ impl QueryPlanner {
         }
 
         // Add SELECT list as projection
-        if !select.select_list.iter().any(|item| matches!(item, crate::query::ast::SelectItem::Wildcard)) {
+        if !select
+            .select_list
+            .iter()
+            .any(|item| matches!(item, crate::query::ast::SelectItem::Wildcard))
+        {
             let exprs: Result<Vec<_>, _> = select
                 .select_list
                 .iter()
@@ -132,7 +127,7 @@ impl QueryPlanner {
         // TODO: Implement proper catalog lookup
         // For now, return a simple test schema
         use crate::query::types::{Column, DataType};
-        
+
         let schema = Schema::new(vec![
             Column {
                 name: "id".to_string(),
@@ -145,7 +140,7 @@ impl QueryPlanner {
                 nullable: true,
             },
         ]);
-        
+
         Ok(schema)
     }
 }
@@ -166,9 +161,9 @@ mod tests {
         let planner = QueryPlanner::new();
         let select = SelectStatement::select_all_from("users");
         let stmt = Statement::Select(select);
-        
+
         let plan = planner.plan(&stmt).unwrap();
-        
+
         match plan {
             PhysicalPlan::SeqScan { table_name, .. } => {
                 assert_eq!(table_name, "users");

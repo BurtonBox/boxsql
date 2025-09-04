@@ -32,7 +32,10 @@ pub enum SelectItem {
     /// Wildcard (*) - select all columns
     Wildcard,
     /// Specific expression with optional alias
-    Expression { expr: Expression, alias: Option<String> },
+    Expression {
+        expr: Expression,
+        alias: Option<String>,
+    },
 }
 
 /// SQL expression node.
@@ -104,22 +107,30 @@ impl SelectStatement {
 impl Expression {
     /// Creates a column reference expression.
     pub fn column(name: &str) -> Self {
-        Self::Column { name: name.to_string() }
+        Self::Column {
+            name: name.to_string(),
+        }
     }
 
     /// Creates a literal integer expression.
     pub fn integer(value: i32) -> Self {
-        Self::Literal { value: Value::Integer(value) }
+        Self::Literal {
+            value: Value::Integer(value),
+        }
     }
 
     /// Creates a literal string expression.
     pub fn string(value: &str) -> Self {
-        Self::Literal { value: Value::Varchar(value.to_string()) }
+        Self::Literal {
+            value: Value::Varchar(value.to_string()),
+        }
     }
 
     /// Creates a literal boolean expression.
     pub fn boolean(value: bool) -> Self {
-        Self::Literal { value: Value::Boolean(value) }
+        Self::Literal {
+            value: Value::Boolean(value),
+        }
     }
 
     /// Creates an equality expression.
@@ -148,7 +159,7 @@ mod tests {
     #[test]
     fn test_select_all_from() {
         let stmt = SelectStatement::select_all_from("users");
-        
+
         assert_eq!(stmt.select_list, vec![SelectItem::Wildcard]);
         assert_eq!(stmt.from, Some("users".to_string()));
         assert!(stmt.where_clause.is_none());
@@ -162,10 +173,30 @@ mod tests {
         let str_expr = Expression::string("hello");
         let bool_expr = Expression::boolean(true);
 
-        assert_eq!(col_expr, Expression::Column { name: "name".to_string() });
-        assert_eq!(int_expr, Expression::Literal { value: Value::Integer(42) });
-        assert_eq!(str_expr, Expression::Literal { value: Value::Varchar("hello".to_string()) });
-        assert_eq!(bool_expr, Expression::Literal { value: Value::Boolean(true) });
+        assert_eq!(
+            col_expr,
+            Expression::Column {
+                name: "name".to_string()
+            }
+        );
+        assert_eq!(
+            int_expr,
+            Expression::Literal {
+                value: Value::Integer(42)
+            }
+        );
+        assert_eq!(
+            str_expr,
+            Expression::Literal {
+                value: Value::Varchar("hello".to_string())
+            }
+        );
+        assert_eq!(
+            bool_expr,
+            Expression::Literal {
+                value: Value::Boolean(true)
+            }
+        );
     }
 
     #[test]
@@ -174,7 +205,12 @@ mod tests {
         let right = Expression::integer(100);
         let eq_expr = Expression::eq(left.clone(), right.clone());
 
-        if let Expression::BinaryOp { left: l, op, right: r } = eq_expr {
+        if let Expression::BinaryOp {
+            left: l,
+            op,
+            right: r,
+        } = eq_expr
+        {
             assert_eq!(*l, left);
             assert_eq!(op, BinaryOperator::Eq);
             assert_eq!(*r, right);
