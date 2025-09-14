@@ -6,3 +6,7 @@ resolver = "3"
 edition = "2024"
 
 [workspace.dependencies]
+anyhow = {version = "1.0.99"}
+thiserror = {version = "2.0.14"}
+crc32fast = {version = "1.5.0"}
+serde = {version = "1.0.219", features = ["derive"]}
