@@ -29,6 +29,47 @@ Rust is a language well-suited for **high-performance, safe systems programming*
 - Rust 2024 edition or later
 - Cargo package manager
 
+### Build
+
+```bash
+# Build all workspace members
+cargo build
+
+# Build a specific crate
+cargo build -p storage
+cargo build -p boxsqld
+```
+
+## 🚀 Running
+
+```bash
+# Run the database daemon (data stored in ./data by default)
+cargo run -p boxsqld
+
+# Run with a custom data directory
+BOXSQLD_DATA=/path/to/data cargo run -p boxsqld
+```
+
+The daemon creates heap pages, inserts test tuples, and writes them to disk in the configured data directory.
+
+## 🧪 Testing
+
+```bash
+# Run all tests
+cargo test
+
+# Test a specific crate
+cargo test -p storage
+```
+
+## 🔍 Code Quality
+
+```bash
+cargo clippy    # Lint
+cargo fmt       # Format
+cargo check     # Fast compilation check
+```
+
 ## ⚖️ License
 
 This project is licensed under the Apache License - see the [LICENSE](LICENSE) file for details.
